@@ -6,11 +6,11 @@
             "marginBottom": 25
     },
     "title": {
-            "text": "<?php echo $type;?> Results",
+            "text": "<?php echo $options['type'];?> Results",
             "x": -20
     },
     "subtitle": {
-            "text": "<?php echo $time_frame;?> Average",
+            "text": "<?php echo $options['time_frame'];?> Average",
             "x": -20
     },
     "xAxis": {
@@ -18,7 +18,7 @@
     },
     "yAxis": {
             "title": {
-                "text": "Number of <?php echo $type;?>s"
+                "text": "Number of <?php echo $options['type'];?>s"
             },
             "plotLines": [{
                     "value": 0,

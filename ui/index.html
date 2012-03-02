@@ -96,11 +96,10 @@
                     <li>
                         <label for='select_snapshot'>Select Snapshot:</label>
                         <select name='select_snapshot' id='select_snapshot'>
-                            <?php foreach ( $results as $file ) { ?>
+                            <?php foreach ( $snapshot_files as $file ) { ?>
                                 <option value='<?php echo $file;?>'><?php echo $file;?></option>
                             <?php } ?>
                         </select>
-                        <input type='hidden' id='view_snapshot' name='view_snapshot' value='0' />
                     </li>
 
                     <li>
@@ -357,9 +356,8 @@
             event.preventDefault();
             $('#output').html("<div class='loader'><img src='ui/images/loading.gif' /></div>");
 
-            $.post('index.php', {
-                'select_snapshot' : $('#select_snapshot').val(),
-                'view_snapshot'   : $('#view_snapshot').val()
+            $.get('index.php', {
+                'snapshot' : $('#select_snapshot').val()
             }, function(data) {
                 $('#output').fadeOut(300, function() {
                     $(this).html(data).fadeIn(300, function() {
@@ -397,7 +395,7 @@
 
                 // Update the snapshot list
                 $.get('index.php', {
-                    'snapshots' : '1'
+                    'snapshot_files' : '1'
                 }, function(data) {
                     var snapshots = $.parseJSON(data);
                     $('#select_snapshot').html('');

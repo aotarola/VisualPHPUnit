@@ -15,7 +15,7 @@
         $results = array();
         $handler = opendir(SNAPSHOT_DIRECTORY);
         while ( $file = readdir($handler) ) {
-            if ( strpos($file, '.') !== 0 && strtolower(pathinfo($file, PATHINFO_EXTENSION)) == 'html' ) {
+            if ( strtolower(pathinfo($file, PATHINFO_EXTENSION)) == 'html' ) {
                 $results[] = $file;
             }
         }
@@ -43,23 +43,9 @@
             echo 'OK';
         }
         exit;
-    } elseif ( isset($_GET['snapshots']) && $_GET['snapshots'] == '1' ) {
-        $results = get_snapshots();
-        echo json_encode($results);
-        exit;
-    }
-
-    if ( empty($_POST) ) {
-        $results = get_snapshots();
-
-        include 'ui/index.html';
-        exit;
-    }
-
-    // Archives
-    if ( isset($_POST['view_snapshot']) && $_POST['view_snapshot'] == 1 ) {
+    } elseif ( isset($_GET['snapshot']) ) {
         $dir = realpath(SNAPSHOT_DIRECTORY) . '/';
-        $snapshot = realpath($dir . $_POST['select_snapshot']);
+        $snapshot = realpath($dir . $_GET['snapshot']);
 
         ob_start();
         include $snapshot;
@@ -67,17 +53,30 @@
         ob_end_clean();
         echo $content;
         exit;
+    } elseif ( isset($_GET['snapshot_files']) ) {
+        echo json_encode(get_snapshots());
+        exit;
     }
+
+
+    if ( empty($_POST) ) {
+        $snapshot_files = get_snapshots();
+        include 'ui/index.html';
+        exit;
+    }
+
 
     require 'lib/VPU.php';
     $vpu = new VPU();
 
     // Graphs
     if ( isset($_POST['graph_type']) ) {
-        $graph_type = $_POST['graph_type'];
-        $time_frame = $_POST['time_frame'];
-        $start_date = $_POST['start_date'];
-        $end_date = $_POST['end_date'];
+        $options = array(
+            'type'       => $_POST['graph_type'],
+            'time_frame' => $_POST['time_frame'],
+            'start_date' => $_POST['start_date'],
+            'end_date'   => $_POST['end_date']
+        );
 
         require 'lib/PDO_MySQL.php';
         $config = array(
@@ -89,7 +88,7 @@
         );
         $db = new PDO_MySQL($config);
 
-        echo $vpu->build_graph($graph_type, $time_frame, $start_date, $end_date, $db);
+        echo $vpu->build_graph($options, $db);
         exit;
     }
 

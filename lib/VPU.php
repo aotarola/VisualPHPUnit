@@ -35,16 +35,19 @@ class VPU {
    /**
     *  Collects the statistics within a given date range and generates a graph.
     *
-    *  @param string $type         The type of graph (`Suites` or `Tests`).
-    *  @param string $time_frame   The time frame (`Daily`, `Weekly`, or `Monthly`).
-    *  @param string $start_date   The starting date.
-    *  @param string $end_date     The ending date.
+    *  @param array $options       The graph options.  Takes the following keys:
+    *                              type       - The type of graph
+    *                              ('Suites' or 'Tests').
+    *                              time_frame - The time frame
+    *                              ('Daily', 'Weekly', or 'Monthly').
+    *                              start_date - The starting date.
+    *                              end_date   - The ending date.
     *  @param object $db           The database handler.
     *  @access public
     *  @return string
     */
-    public function build_graph($type, $time_frame, $start_date, $end_date, $db) {
-        switch ( $time_frame ) {
+    public function build_graph($options, $db) {
+        switch ( $options['time_frame'] ) {
             case 'Daily':
                 $interval = 86400;
                 $sql_format = 'Y-m-d';
@@ -62,10 +65,10 @@ class VPU {
                 break;
         }
 
-        $current = $start = strtotime($start_date);
-        $end = strtotime($end_date) + $interval;
+        $current = $start = strtotime($options['start_date']);
+        $end = strtotime($options['end_date']) + $interval;
 
-        $table = ucfirst(rtrim($type, 's')) . 'Result';
+        $table = ucfirst(rtrim($options['type'], 's')) . 'Result';
 
         $categories = array();
         $plot_values = array(
@@ -115,7 +118,9 @@ class VPU {
             $current = $next;
         }
 
-        $plot_values = array_map(function($val) { return json_encode($val); }, $plot_values);
+        $plot_values = array_map(
+            function($val) { return json_encode($val); }, $plot_values
+        );
         $categories = json_encode($categories);
 
         ob_start();
@@ -128,7 +133,7 @@ class VPU {
    /**
     *  Builds the suite statistics.
     *
-    *  @param array $stats        The stat-related variables to be transformed.
+    *  @param array $statistics    The stat-related variables to be transformed.
     *  @access protected
     *  @return string
     */
@@ -142,7 +147,8 @@ class VPU {
                 }
                 // Avoid divide by zero error
                 if ( $stats['total'] ) {
-                    $results[$name]['percent_' . $key] = $stats[$key] / $stats['total'] * 100;
+                    $percent = $stats[$key] / $stats['total'];
+                    $results[$name]['percent_' . $key] = $percent * 100;
                 } else {
                     $results[$name]['percent_' . $key] = 0;
                 }
@@ -159,7 +165,7 @@ class VPU {
    /**
     *  Builds a suite of tests.
     *
-    *  @param array $suite        The suite-related variables to be displayed.
+    *  @param array $suite     The suite-related variables to be displayed.
     *  @access protected
     *  @return string
     */
@@ -177,7 +183,7 @@ class VPU {
    /**
     *  Builds a test.
     *
-    *  @param array $test             The test-related variables to be displayed.
+    *  @param array $test    The test-related variables to be displayed.
     *  @access protected
     *  @return string
     */
@@ -197,7 +203,7 @@ class VPU {
    /**
     *  Returns the class name without the namespace.
     *
-    *  @param string $class           The class name.
+    *  @param string $class    The class name.
     *  @access protected
     *  @return string
     */
@@ -210,7 +216,7 @@ class VPU {
     *  Organizes the output from PHPUnit into a more manageable array
     *  of suites and statistics.
     *
-    *  @param string $pu_output        The JSON output from PHPUnit.
+    *  @param string $pu_output    The JSON output from PHPUnit.
     *  @access protected
     *  @return array
     */
@@ -267,8 +273,8 @@ class VPU {
    /**
     *  Creates an HTML snapshot of the test results.
     *
-    *  @param string $data            The data to be written.
-    *  @param string $dir             The directory in which to store the snapshot.
+    *  @param string $data    The data to be written.
+    *  @param string $dir     The directory in which to store the snapshot.
     *  @access public
     *  @return void
     */
@@ -278,14 +284,13 @@ class VPU {
         }
         $filename = $dir . date('Y-m-d_G-i') . '.html';
         $this->_write_file($filename, $data);
-        // TODO: Add a try/catch for this
         chmod($filename, 0777);
     }
 
    /**
     *  Erases the contents of a file.
     *
-    *  @param string $filename        The file to be emptied.
+    *  @param string $filename    The file to be emptied.
     *  @access protected
     *  @return void
     */
@@ -298,7 +303,7 @@ class VPU {
     *
     *  @see VPU->_parse_output()
     *  @see VPU->_compile_suites()
-    *  @param array $test_results     The parsed test results.
+    *  @param array $test_results    The parsed test results.
     *  @access protected
     *  @return string
     */
@@ -337,9 +342,10 @@ class VPU {
     }
 
    /**
-    *  Retrieves any user-generated debugging messages from a PHPUnit test result.
+    *  Retrieves any user-generated debugging messages from a PHPUnit
+    *  test result.
     *
-    *  @param string $message        The message supplied by VPU's transformed JSON.
+    *  @param string $message    The message supplied by VPU's transformed JSON.
     *  @access protected
     *  @return string
     */
@@ -386,8 +392,8 @@ class VPU {
    /**
     *  Retrieves the status from a PHPUnit test result.
     *
-    *  @param string $status        The status supplied by VPU's transformed JSON.
-    *  @param string $message       The message supplied by VPU's transformed JSON.
+    *  @param string $status     The status supplied by VPU's transformed JSON.
+    *  @param string $message    The message supplied by VPU's transformed JSON.
     *  @access protected
     *  @return string
     */
@@ -413,7 +419,7 @@ class VPU {
    /**
     *  Retrieves the stack trace from a PHPUnit test result.
     *
-    *  @param string $trace        The message supplied by VPU's transformed JSON.
+    *  @param string $trace    The message supplied by VPU's transformed JSON.
     *  @access protected
     *  @return string
     */
@@ -450,12 +456,13 @@ class VPU {
     }
 
    /**
-    *  Serves as the error handler.  Formats the errors, and then writes them to the sandbox file.
+    *  Serves as the error handler.  Formats the errors, and then writes them
+    *  to the sandbox file.
     *
-    *  @param int $err_no            The level of the error raised.
-    *  @param string $err_str        The error message.
-    *  @param string $err_file       The file in which the error was raised.
-    *  @param int $err_line          The line number at which the error was raised.
+    *  @param int $err_no         The level of the error raised.
+    *  @param string $err_str     The error message.
+    *  @param string $err_file    The file in which the error was raised.
+    *  @param int $err_line       The line number at which the error was raised.
     *  @access public
     *  @return bool
     */
@@ -505,7 +512,7 @@ class VPU {
    /**
     *  Formats exceptions for sandbox use.
     *
-    *  @param Exception $exception            The thrown exception.
+    *  @param Exception $exception    The thrown exception.
     *  @access protected
     *  @return void
     */
@@ -526,38 +533,40 @@ class VPU {
    /**
     *  Iterates through the supplied directory and loads the test files.
     *
-    *  @param string $test_dir       The directory containing the tests.
+    *  @param string $test_dir    The directory containing the tests.
     *  @access protected
-    *  @return void
+    *  @return array
     */
     protected function _load_dir($test_dir) {
-        try {
-            $test_dir = realpath($test_dir);
-            if ( !is_dir($test_dir) ) {
-                throw new Exception($test_dir . 'is not a valid directory.');
-            }
+        $test_dir = realpath($test_dir);
+        if ( !is_dir($test_dir) ) {
+            return array();
+        }
 
-            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($test_dir), RecursiveIteratorIterator::LEAVES_ONLY);
+        $dir_iterator = new RecursiveDirectoryIterator($test_dir);
+        $it = new RecursiveIteratorIterator($dir_iterator);
 
-            $test_cases = array();
-            while ( $it->valid() ) {
-                if ( !$it->isDot() && strtolower(pathinfo($it->key(), PATHINFO_EXTENSION)) == 'php' ) {
-                    $test_cases[] = $it->key();
-                }
-
+        $test_cases = array();
+        while ( $it->valid() ) {
+            if ( !$it->isDot() ) {
                 $it->next();
             }
-            return $test_cases;
-        } catch (Exception $e) {
-            $this->_handle_exception($e);
-            return false;
+
+            $extension = strtolower(pathinfo($it->key(), PATHINFO_EXTENSION));
+            if ( $extension == 'php' ) {
+                $test_cases[] = $it->key();
+            }
+
+            $it->next();
         }
+        return $test_cases;
     }
 
    /**
-    *  Parses and formats the JSON output from PHPUnit into an associative array.
+    *  Parses and formats the JSON output from PHPUnit into an associative
+    *  array.
     *
-    *  @param string $pu_output        The JSON output from PHPUnit.
+    *  @param string $pu_output    The JSON output from PHPUnit.
     *  @access protected
     *  @return array
     */
@@ -590,7 +599,8 @@ class VPU {
     *  Retrieves the files from any supplied directories, and filters
     *  the list of tests by ensuring that the files exist and are PHP files.
     *
-    *  @param array $tests       The directories/filenames containing the tests to be run through PHPUnit.
+    *  @param array $tests    The directories/filenames containing the tests
+    *                         to be run through PHPUnit.
     *  @access protected
     *  @return array
     */
@@ -609,81 +619,64 @@ class VPU {
     }
 
    /**
-    *  Converts the first nested layer of PHPUnit-generated JSON to an associative array.
+    *  Converts the first nested layer of PHPUnit-generated JSON to an
+    *  associative array.
     *
-    *  @param string $str        The JSON output from PHPUnit.
+    *  @param string $str    The JSON output from PHPUnit.
     *  @access protected
     *  @return array
     */
     protected function _pull($str) {
-        try {
-            $tags = array();
-            $nest = 0;
-            $start_mark = 0;
+        $tags = array();
+        $nest = 0;
+        $start_mark = 0;
 
-            $length = strlen($str);
-            for ( $i=0; $i < $length; $i++ ) {
-                $char = $str{$i};
+        $length = strlen($str);
+        for ( $i=0; $i < $length; $i++ ) {
+            $char = $str{$i};
 
-                if ( $char == '{' ) {
-                    // Ensure we're only adding events to the array
-                    if ( $nest == 0 && substr($str, $i, 18) != '{&quot;event&quot;' ) {
-                        continue;
-                    }
-
-                    $nest++;
-                    if ( $nest == 1 ) {
-                        $start_mark = $i;
-                    }
-                } elseif ( $char == '}' && $nest > 0 ) {
-                    if ( $nest == 1 ) {
-                        $tags[] = substr($str, $start_mark + 1, $i - $start_mark - 1);
-                        $start_mark = $i;
-                    }
-                    $nest--;
+            if ( $char == '{' ) {
+                // Ensure we're only adding events to the array
+                if ( $nest == 0 && substr($str, $i, 18) != '{&quot;event&quot;' ) {
+                    continue;
                 }
-            }
 
-            if ( $nest !== 0 ) {
-                throw new Exception('Unable to parse JSON response from PHPUnit.');
+                $nest++;
+                if ( $nest == 1 ) {
+                    $start_mark = $i;
+                }
+            } elseif ( $char == '}' && $nest > 0 ) {
+                if ( $nest == 1 ) {
+                    $tags[] = substr($str, $start_mark + 1, $i - $start_mark - 1);
+                    $start_mark = $i;
+                }
+                $nest--;
             }
-
-            return $tags;
-        } catch (Exception $e) {
-            $this->_handle_exception($e);
-            return false;
         }
+
+        return $tags;
 
     }
 
    /**
     *  Replaces text within a string.
     *
-    *  @param string $old            The substring to be replaced.
-    *  @param string $new            The replacment string.
-    *  @param string $subject        The string whose contents will be replaced.
+    *  @param string $old        The substring to be replaced.
+    *  @param string $new        The replacment string.
+    *  @param string $subject    The string whose contents will be replaced.
     *  @access protected
     *  @return string
     */
     protected function _replace($old, $new, $subject) {
-        try {
-            $pos = strpos($subject, $old);
-
-            if ( $pos === false ) {
-                throw new Exception('Cannot find tag to replace (old: ' . $old . ', new: ' . htmlspecialchars($new) . ').');
-            }
-
-            return substr_replace($subject, $new, $pos, strlen($old));
-        } catch (Exception $e) {
-            $this->_handle_exception($e);
-            return false;
-        }
+        $pos = strpos($subject, $old);
+        return substr_replace($subject, $new, $pos, strlen($old));
     }
 
    /**
     *  Runs supplied tests through PHPUnit.
     *
-    *  @param array $tests        The directories/filenames containing the tests to be run through PHPUnit.
+    *  @param array $tests    The directories/filenames containing the
+    *                         tests to be run through PHPUnit.
     *  @access public
     *  @return string
     */
@@ -709,7 +702,8 @@ class VPU {
         $result = new PHPUnit_Framework_TestResult;
         $result->addListener(new PHPUnit_Util_Log_JSON);
 
-        // We need to temporarily turn off html_errors to ensure correct parsing of test debug output
+        // We need to temporarily turn off html_errors to ensure
+        // correct parsing of test debug output
         $html_errors = ini_get('html_errors');
 
         ob_start();
@@ -726,8 +720,8 @@ class VPU {
     *  Saves the statistics to a database.
     *
     *  @see VPU->_compile_suites()
-    *  @param string $results     The JSON output from PHPUnit.
-    *  @param object $db          The database handler.
+    *  @param string $results    The JSON output from PHPUnit.
+    *  @param object $db         The database handler.
     *  @access public
     *  @return bool
     */
@@ -780,26 +774,22 @@ class VPU {
    /**
     *  Writes data to a file.
     *
-    *  @param string $filename        The name of the file.
-    *  @param string $data            The data to be written.
-    *  @param string $mode            The type of access to be granted to the file handle.
+    *  @param string $filename    The name of the file.
+    *  @param string $data        The data to be written.
+    *  @param string $mode        The type of access to be granted to the
+    *                             file handle.
     *  @access protected
     *  @return string
     */
     protected function _write_file($filename, $data, $mode='a') {
-        try {
-            $handle = @fopen($filename, $mode);
-            if ( !$handle ) {
-                throw new Exception('Could not open ' . $filename . ' for writing.  Check the location and permissions of the file and try again.');
-            }
-
-            fwrite($handle, $data);
-            fclose($handle);
-            return true;
-        } catch (Exception $e) {
-            $this->_handle_exception($e);
+        $handle = fopen($filename, $mode);
+        if ( !$handle ) {
             return false;
         }
+
+        fwrite($handle, $data);
+        fclose($handle);
+        return true;
     }
 
 }
